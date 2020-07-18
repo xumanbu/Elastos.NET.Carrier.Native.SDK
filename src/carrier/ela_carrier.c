@@ -1565,8 +1565,8 @@ void notify_friend_status_cb(uint32_t friend_number, int status,
 }
 
 static
-void notify_friend_request_cb(const uint8_t *public_key, const uint8_t* greeting,
-                              size_t length, void *context)
+void notify_friend_request_internal(const uint8_t *public_key, const uint8_t* greeting,
+                                    size_t length, bool offline, void *context)
 {
     ElaCarrier *w = (ElaCarrier *)context;
     uint32_t friend_number;
@@ -1614,9 +1614,17 @@ void notify_friend_request_cb(const uint8_t *public_key, const uint8_t* greeting
     strcpy(ui.description, desc);
 
     if (w->callbacks.friend_request)
-        w->callbacks.friend_request(w, ui.userid, &ui, hello, w->context);
+        w->callbacks.friend_request(w, ui.userid, &ui, hello, offline, w->context);
 
     elacp_free(cp);
+}
+
+
+static
+void notify_friend_request_cb(const uint8_t *public_key, const uint8_t* gretting,
+                              size_t length, void *context)
+{
+    notify_friend_request_internal(public_key, gretting, length, false, context);
 }
 
 static void handle_add_friend_cb(EventBase *event, ElaCarrier *w)
@@ -3505,7 +3513,7 @@ static void handle_offline_friend_request_cb(EventBase *base, ElaCarrier *w)
         return;
     }
 
-    notify_friend_request_cb(pubkey, event->data, event->length, w);
+    notify_friend_request_internal(pubkey, event->data, event->length, true, w);
 }
 
 static void notify_offreq_received(ElaCarrier *w, const char *from,
